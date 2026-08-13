@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "bomly.plugin.package.v1",
+  "id": "syft-detector",
+  "name": "Syft",
+  "version": "0.1.0",
+  "kind": "detector",
+  "runtime": "hashicorp-grpc",
+  "pluginApiVersion": "bomly.plugin.v1",
+  "bomlyVersion": ">=0.1.0",
+  "entrypoint": {
+    "linux/amd64": "bin/bomly-plugin-syft-detector",
+    "linux/arm64": "bin/bomly-plugin-syft-detector",
+    "darwin/amd64": "bin/bomly-plugin-syft-detector",
+    "darwin/arm64": "bin/bomly-plugin-syft-detector",
+    "windows/amd64": "bin/bomly-plugin-syft-detector.exe"
+  },
+  "source": "github:bomly-dev/bomly-plugin-syft-detector@v0.1.0",
+  "homepage": "https://github.com/bomly-dev/bomly-plugin-syft-detector",
+  "license": "Apache-2.0",
+  "description": "Detector plugin that resolves dependency graphs for filesystems, git repositories, and container images through Syft (vendored library or external syft CLI)."
+}
