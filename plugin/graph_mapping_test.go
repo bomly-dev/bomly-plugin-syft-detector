@@ -54,16 +54,16 @@ func TestGraphFromSyftSBOMMapsPackagesEdgesLicenses(t *testing.T) {
 	requestsNode := nodeByName(t, g, "requests")
 	certifiNode := nodeByName(t, g, "certifi")
 
-	if requestsNode.Version != "2.32.3" || requestsNode.PURL != "pkg:pypi/requests@2.32.3" {
+	if requestsNode.Version != "2.32.3" || requestsNode.NodeID() != "pkg:pypi/requests@2.32.3" {
 		t.Errorf("unexpected requests coordinates: %+v", requestsNode.Coordinates)
 	}
 
 	// Dependency-of relationship becomes a parent → child edge.
-	deps, err := g.DirectDependencies(requestsNode.ID)
+	deps, err := g.DirectDependencies(requestsNode.NodeID())
 	if err != nil {
 		t.Fatalf("dependencies(requests): %v", err)
 	}
-	if len(deps) != 1 || deps[0].ID != certifiNode.ID {
+	if len(deps) != 1 || deps[0].NodeID() != certifiNode.NodeID() {
 		t.Errorf("expected requests → certifi edge, got %+v", deps)
 	}
 
@@ -74,9 +74,9 @@ func TestGraphFromSyftSBOMMapsPackagesEdgesLicenses(t *testing.T) {
 	}
 }
 
-func nodeByName(t *testing.T, g *sdk.Graph, name string) *sdk.Dependency {
+func nodeByName(t *testing.T, g *sdk.Graph, name string) *sdk.DependencyNode {
 	t.Helper()
-	for _, n := range g.Nodes() {
+	for _, n := range g.DependencyNodes() {
 		if n.Name == name {
 			return n
 		}

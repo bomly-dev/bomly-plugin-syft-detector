@@ -1,12 +1,12 @@
 module github.com/bomly-dev/bomly-plugin-syft-detector
 
-go 1.26.3
+go 1.27.0
 
 require (
 	github.com/CycloneDX/cyclonedx-go v0.11.0
 	github.com/anchore/packageurl-go v0.2.0
 	github.com/anchore/syft v1.51.0
-	github.com/bomly-dev/bomly-sdk v0.3.0
+	github.com/bomly-dev/bomly-sdk v0.7.0
 	github.com/glebarez/sqlite v1.11.0
 	github.com/spdx/tools-golang v0.6.0-rc4
 	go.uber.org/zap v1.28.0
@@ -209,6 +209,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/opencontainers/runtime-spec v1.3.0 // indirect
+	github.com/package-url/packageurl-go v0.1.7 // indirect
 	github.com/pborman/indent v1.2.1 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.4.3 // indirect

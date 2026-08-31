@@ -28,12 +28,23 @@ func graphFromSyftSBOM(s *syftsbom.SBOM) (*sdk.Graph, error) {
 	}
 
 	depsGraph := sdk.NewWithCapacity(packageCount)
+	// Syft's relationships are keyed by its own artifact IDs, while a node is
+	// keyed by its canonical package URL (ADR-0041). The two are no longer
+	// the same string, so the mapping is kept explicitly rather than assumed
+	// -- without it every edge looks up an ID no node has.
+	nodeIDBySyftID := make(map[string]string, packageCount)
 	if s.Artifacts.Packages != nil {
 		for _, pkg := range s.Artifacts.Packages.Sorted() {
 			node := graphFromSyftPackage(pkg)
-			if err := depsGraph.AddNode(node); err != nil {
-				return nil, fmt.Errorf("add syft package %q: %w", node.ID, err)
+			if node == nil {
+				// No identity could be minted; the package is not something
+				// this graph can say anything about.
+				continue
 			}
+			if err := depsGraph.AddNode(node); err != nil {
+				return nil, fmt.Errorf("add syft package %q: %w", node.NodeID(), err)
+			}
+			nodeIDBySyftID[string(pkg.ID())] = node.NodeID()
 		}
 	}
 
@@ -42,8 +53,15 @@ func graphFromSyftSBOM(s *syftsbom.SBOM) (*sdk.Graph, error) {
 			continue
 		}
 
-		dependencyID, parentID, ok := syftDependencyEdge(rel)
+		dependencySyftID, parentSyftID, ok := syftDependencyEdge(rel)
 		if !ok {
+			continue
+		}
+		dependencyID, okDep := nodeIDBySyftID[dependencySyftID]
+		parentID, okParent := nodeIDBySyftID[parentSyftID]
+		if !okDep || !okParent {
+			// One end was skipped for want of identity, so the edge has
+			// nothing to connect.
 			continue
 		}
 
@@ -71,21 +89,27 @@ func graphContainerFromSyftSBOM(s *syftsbom.SBOM, manager sdk.PackageManager) (*
 
 	rootPackages := depsGraph.Roots()
 	if len(rootPackages) == 0 {
-		manifest := manifestMetadataFromPackages(depsGraph.Nodes(), manager)
+		manifest := manifestMetadataFromPackages(depsGraph.DependencyNodes(), manager)
 		return sdk.SingleGraphContainer(depsGraph, manifest), nil
 	}
 
 	groupedRoots := make(map[string][]string, len(rootPackages))
 	groupedManifest := make(map[string]sdk.ManifestMetadata, len(rootPackages))
 	groupOrder := make([]string, 0, len(rootPackages))
-	for _, rootPkg := range rootPackages {
+	for _, rootNode := range rootPackages {
+		// Roots yields the union type; only a dependency node has the
+		// coordinates a manifest is derived from.
+		rootPkg, ok := rootNode.(*sdk.DependencyNode)
+		if !ok {
+			continue
+		}
 		manifest := manifestMetadataFromPackage(rootPkg, manager)
-		key := manifestGroupKey(manifest, rootPkg.ID)
+		key := manifestGroupKey(manifest, rootPkg.NodeID())
 		if _, ok := groupedRoots[key]; !ok {
 			groupOrder = append(groupOrder, key)
 			groupedManifest[key] = manifest
 		}
-		groupedRoots[key] = append(groupedRoots[key], rootPkg.ID)
+		groupedRoots[key] = append(groupedRoots[key], rootPkg.NodeID())
 	}
 
 	entries := make([]sdk.GraphEntry, 0, len(groupOrder))
@@ -100,7 +124,7 @@ func graphContainerFromSyftSBOM(s *syftsbom.SBOM, manager sdk.PackageManager) (*
 		}
 		manifest := groupedManifest[key]
 		if manifest.Path == "" {
-			manifest = manifestMetadataFromPackages(entryGraph.Nodes(), manager)
+			manifest = manifestMetadataFromPackages(entryGraph.DependencyNodes(), manager)
 		}
 		entries = append(entries, sdk.GraphEntry{
 			Graph:    entryGraph,
@@ -108,9 +132,9 @@ func graphContainerFromSyftSBOM(s *syftsbom.SBOM, manager sdk.PackageManager) (*
 		})
 	}
 
-	leftovers := make([]*sdk.Dependency, 0)
-	for _, pkg := range depsGraph.Nodes() {
-		if _, ok := covered[pkg.ID]; ok {
+	leftovers := make([]*sdk.DependencyNode, 0)
+	for _, pkg := range depsGraph.DependencyNodes() {
+		if _, ok := covered[pkg.NodeID()]; ok {
 			continue
 		}
 		leftovers = append(leftovers, pkg)
@@ -129,27 +153,36 @@ func graphContainerFromSyftSBOM(s *syftsbom.SBOM, manager sdk.PackageManager) (*
 	return &sdk.GraphContainer{Entries: entries}, nil
 }
 
-func graphFromSyftPackage(pkg syftpkg.Package) *sdk.Dependency {
+// graphFromSyftPackage builds a dependency node from a Syft package, or nil
+// when the package carries no identity a node can be minted from.
+//
+// Identity is the constructor's now (ADR-0041): a node's ID is its canonical
+// package URL, so Syft's own artifact ID is no longer carried into the graph
+// and the StableID fallback is gone with it. A package Syft catalogued
+// without usable coordinates is skipped rather than admitted under a
+// synthetic ID.
+func graphFromSyftPackage(pkg syftpkg.Package) *sdk.DependencyNode {
 	licenses := pkg.Licenses.ToSlice()
 	locations := pkg.Locations.ToSlice()
 	parsedPURL := parsePackageURL(pkg.PURL)
 	packageManager := sdk.PackageManager(strings.ToLower(string(pkg.Type)))
 
-	node := sdk.NewDependencyWithID(string(pkg.ID()), sdk.Dependency{Coordinates: sdk.Coordinates{Ecosystem: sdk.Ecosystem(syftEcosystem(pkg, parsedPURL)),
+	node, err := sdk.NewDependencyNode(sdk.Coordinates{
+		Ecosystem:      sdk.Ecosystem(syftEcosystem(pkg, parsedPURL)),
 		Name:           pkg.Name,
 		Version:        pkg.Version,
 		Org:            syftOrg(pkg, parsedPURL),
 		PackageManager: packageManager,
 		Type:           sdk.ParsePackageType(string(pkg.Type)),
 		Language:       sdk.ParseLanguage(pkg.Language.String()),
-		PURL:           pkg.PURL}, FoundBy: pkg.FoundBy,
-		Locations: graphLocations(locations),
-		CPEs:      graphCPEs(pkg.CPEs),
+		PURL:           pkg.PURL,
 	})
-
-	if node.ID == "" {
-		node.ID = node.StableID()
+	if err != nil {
+		return nil
 	}
+	node.FoundBy = pkg.FoundBy
+	node.Locations = graphLocations(locations)
+	node.CPEs = graphCPEs(pkg.CPEs)
 	sdk.SetDetectionLicenses(node, graphLicenses(licenses))
 
 	return node
@@ -255,8 +288,19 @@ func syftOrg(pkg syftpkg.Package, purl *packageurl.PackageURL) string {
 	return ""
 }
 
+// parsePackageURL parses with anchore/packageurl-go rather than purlkit,
+// deliberately. The result is fed to helpers that compare against Syft's own
+// package URLs, and Syft's API speaks that type -- converting to purlkit and
+// back would translate a value twice to hand it to a library that wanted the
+// original. sdk.ParsePackageURL, the SDK's wrapper over the same fork, is
+// gone; this is the fork used directly for Syft interop, not a Bomly identity
+// decision. Bomly-side identity is minted by the node constructor.
 func parsePackageURL(value string) *packageurl.PackageURL {
-	return sdk.ParsePackageURL(value)
+	parsed, err := packageurl.FromString(value)
+	if err != nil {
+		return nil
+	}
+	return &parsed
 }
 
 func syftNameAlreadyQualified(name string, purl packageurl.PackageURL) bool {
@@ -280,7 +324,7 @@ func manifestGroupKey(manifest sdk.ManifestMetadata, fallbackID string) string {
 	return fallbackID
 }
 
-func manifestMetadataFromPackages(packages []*sdk.Dependency, manager sdk.PackageManager) sdk.ManifestMetadata {
+func manifestMetadataFromPackages(packages []*sdk.DependencyNode, manager sdk.PackageManager) sdk.ManifestMetadata {
 	for _, pkg := range packages {
 		manifest := manifestMetadataFromPackage(pkg, manager)
 		if manifest.Path != "" {
@@ -296,7 +340,7 @@ func manifestMetadataFromPackages(packages []*sdk.Dependency, manager sdk.Packag
 	return sdk.ManifestMetadata{}
 }
 
-func manifestMetadataFromPackage(pkg *sdk.Dependency, manager sdk.PackageManager) sdk.ManifestMetadata {
+func manifestMetadataFromPackage(pkg *sdk.DependencyNode, manager sdk.PackageManager) sdk.ManifestMetadata {
 	if pkg == nil {
 		return sdk.ManifestMetadata{}
 	}
@@ -364,11 +408,11 @@ func subgraphFromRoots(src *sdk.Graph, rootIDs []string) (*sdk.Graph, map[string
 			return nil, nil, fmt.Errorf("resolve syft dependencies for %q: %w", currentID, err)
 		}
 		for _, dependency := range dependencies {
-			if _, ok := visited[dependency.ID]; ok {
+			if _, ok := visited[dependency.NodeID()]; ok {
 				continue
 			}
-			visited[dependency.ID] = struct{}{}
-			queue = append(queue, dependency.ID)
+			visited[dependency.NodeID()] = struct{}{}
+			queue = append(queue, dependency.NodeID())
 		}
 	}
 
@@ -378,7 +422,7 @@ func subgraphFromRoots(src *sdk.Graph, rootIDs []string) (*sdk.Graph, map[string
 		if !ok {
 			return nil, nil, fmt.Errorf("syft package %q not found while building subgraph", id)
 		}
-		if err := entryGraph.AddNode(pkg.Clone()); err != nil {
+		if err := entryGraph.AddNode(pkg.CloneNode()); err != nil {
 			return nil, nil, fmt.Errorf("add syft subgraph package %q: %w", id, err)
 		}
 	}
@@ -389,11 +433,11 @@ func subgraphFromRoots(src *sdk.Graph, rootIDs []string) (*sdk.Graph, map[string
 			return nil, nil, fmt.Errorf("resolve syft dependencies for %q: %w", id, err)
 		}
 		for _, dependency := range dependencies {
-			if _, ok := visited[dependency.ID]; !ok {
+			if _, ok := visited[dependency.NodeID()]; !ok {
 				continue
 			}
-			if err := entryGraph.AddEdge(id, dependency.ID); err != nil {
-				return nil, nil, fmt.Errorf("add syft subgraph dependency %q -> %q: %w", id, dependency.ID, err)
+			if err := entryGraph.AddEdge(id, dependency.NodeID()); err != nil {
+				return nil, nil, fmt.Errorf("add syft subgraph dependency %q -> %q: %w", id, dependency.NodeID(), err)
 			}
 		}
 	}
@@ -401,13 +445,13 @@ func subgraphFromRoots(src *sdk.Graph, rootIDs []string) (*sdk.Graph, map[string
 	return entryGraph, visited, nil
 }
 
-func packageIDs(packages []*sdk.Dependency) []string {
+func packageIDs(packages []*sdk.DependencyNode) []string {
 	ids := make([]string, 0, len(packages))
 	for _, pkg := range packages {
 		if pkg == nil {
 			continue
 		}
-		ids = append(ids, pkg.ID)
+		ids = append(ids, pkg.NodeID())
 	}
 	return ids
 }
