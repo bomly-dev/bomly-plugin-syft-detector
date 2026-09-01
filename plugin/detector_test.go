@@ -256,22 +256,29 @@ func TestGraphFromSyftSBOM(t *testing.T) {
 	if got := depsGraph.Size(); got != 2 {
 		t.Fatalf("expected graph size 2, got %d", got)
 	}
-	deps, err := depsGraph.DirectDependencies(string(app.ID()))
+	deps, err := depsGraph.DirectDependencies(app.PURL)
 	if err != nil {
 		t.Fatalf("Dependencies() error = %v", err)
 	}
-	if len(deps) != 1 || deps[0].ID != string(dependency.ID()) {
+	// Node IDs are canonical package URLs now, not Syft artifact IDs.
+	// Identity became the ID itself under ADR-0041, so Syft's own ID no
+	// longer travels into the graph.
+	if len(deps) != 1 || deps[0].NodeID() != dependency.PURL {
 		t.Fatalf("unexpected dependencies: %#v", deps)
 	}
 
-	mapped, ok := depsGraph.Node(string(dependency.ID()))
+	mappedNode, ok := depsGraph.Node(dependency.PURL)
 	if !ok {
-		t.Fatalf("expected dependency package %q", dependency.ID())
+		t.Fatalf("expected dependency package %q", dependency.PURL)
+	}
+	mapped, ok := mappedNode.(*sdk.DependencyNode)
+	if !ok {
+		t.Fatalf("expected a dependency node, got %T", mappedNode)
 	}
 	if mapped.Ecosystem != sdk.EcosystemMaven || mapped.Org != "com.example" || mapped.Type != sdk.ParsePackageType(string(syftpkg.JavaPkg)) {
 		t.Fatalf("unexpected mapped package identity: %#v", mapped)
 	}
-	if mapped.PURL != dependency.PURL || mapped.Language != sdk.ParseLanguage(dependency.Language.String()) || mapped.FoundBy != dependency.FoundBy {
+	if mapped.NodeID() != dependency.PURL || mapped.Language != sdk.ParseLanguage(dependency.Language.String()) || mapped.FoundBy != dependency.FoundBy {
 		t.Fatalf("unexpected mapped package metadata: %#v", mapped)
 	}
 	if lics := sdk.DetectionLicenses(mapped); len(lics) != 1 || lics[0].Value != "Apache-2.0" {
@@ -373,7 +380,7 @@ func TestDetectorResolveGraph_UsesSyftLibrary(t *testing.T) {
 		t.Fatalf("expected at least 2 graph packages, got %d", depsGraph.Size())
 	}
 	foundReact := false
-	for _, pkg := range depsGraph.Nodes() {
+	for _, pkg := range depsGraph.DependencyNodes() {
 		if pkg.Name == "react" {
 			foundReact = true
 			break
