@@ -6,7 +6,7 @@ require (
 	github.com/CycloneDX/cyclonedx-go v0.11.0
 	github.com/anchore/packageurl-go v0.2.0
 	github.com/anchore/syft v1.51.0
-	github.com/bomly-dev/bomly-sdk v0.7.0
+	github.com/bomly-dev/bomly-sdk v0.8.0
 	github.com/glebarez/sqlite v1.11.0
 	github.com/spdx/tools-golang v0.6.0-rc4
 	go.uber.org/zap v1.28.0
