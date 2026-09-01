@@ -2,7 +2,7 @@
   "schemaVersion": "bomly.plugin.package.v1",
   "id": "syft-detector",
   "name": "Syft",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "kind": "detector",
   "runtime": "hashicorp-grpc",
   "pluginApiVersion": "bomly.plugin.v1",
