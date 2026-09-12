@@ -40,8 +40,9 @@ func ToGraph(doc *Document) (*sdk.Graph, error) {
 		}
 		// Identity is minted by the constructor now (ADR-0041): a node's ID
 		// is its canonical package URL, so no ID is passed in. A component
-		// whose coordinates cannot mint a well-formed one is skipped rather
-		// than added under a synthetic ID.
+		// whose coordinates cannot mint a well-formed PURL is skipped rather
+		// than added under a synthetic ID -- an SBOM component with no usable
+		// identity is not a dependency this graph can say anything about.
 		pkg, err := sdk.NewDependencyNode(sdk.Coordinates{
 			Name:           component.Name,
 			Version:        component.Version,
