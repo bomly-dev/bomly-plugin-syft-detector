@@ -102,9 +102,11 @@ func TestFromDepGraphEnrichesCycloneDXFromRegistry(t *testing.T) {
 	if vuln.CWEs == nil || len(*vuln.CWEs) != 1 || (*vuln.CWEs)[0] != 1321 {
 		t.Fatalf("expected CWE 1321, got %#v", vuln.CWEs)
 	}
+	// The bom-ref is the canonical package URL now, not "name@version". Node
+	// IDs became the identity itself under ADR-0041, and a document's refs
+	// are node IDs -- this is the one-time ref change the phase-2 release
+	// notes call out, not a defect.
 	if vuln.Affects == nil || len(*vuln.Affects) != 1 || (*vuln.Affects)[0].Ref != "pkg:npm/react@18.2.0" {
-		// The bom-ref is the canonical package URL now: node IDs became the
-		// identity itself under ADR-0041, and a document's refs are node IDs.
 		t.Fatalf("expected affects ref pkg:npm/react@18.2.0, got %#v", vuln.Affects)
 	}
 }

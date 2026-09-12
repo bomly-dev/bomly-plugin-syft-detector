@@ -24,7 +24,8 @@ func FromDepGraph(g *sdk.Graph, opts BuildOptions) (*Document, error) {
 	depsByRef := make(map[string][]string, componentCount)
 
 	// Dependency nodes only: an SBOM component is a package, and the graph now
-	// also holds manifests and modules, which are structural.
+	// also holds manifests and modules, which are structural rather than
+	// things to emit as components.
 	for _, pkg := range g.DependencyNodes() {
 		component := Component{
 			ID:             pkg.NodeID(),
@@ -47,9 +48,9 @@ func FromDepGraph(g *sdk.Graph, opts BuildOptions) (*Document, error) {
 		return components[i].ID < components[j].ID
 	})
 
-	// Only depends-on edges reach a document's dependency list: a
-	// manifest-to-module edge is structural, and emitting it would assert a
-	// relationship no detector made.
+	// WalkTypedEdges rather than WalkEdges: an SBOM's dependency list is the
+	// dependency edges, and a manifest-to-module edge is structural. Emitting
+	// it would put a relationship in the document that no detector asserted.
 	g.WalkTypedEdges(func(from, to sdk.GraphNode, kind sdk.EdgeKind) bool {
 		if kind != sdk.EdgeKindDependsOn {
 			return true
@@ -254,4 +255,26 @@ func componentLicenses(licenses []sdk.PackageLicense) []License {
 		})
 	}
 	return out
+}
+
+// licenseExpressionValue returns the string a license contributes to a format
+// that holds one value: the SPDX expression when the license carries one, and
+// the raw value otherwise.
+func licenseExpressionValue(license License) string {
+	if expression := strings.TrimSpace(license.SPDXExpression); expression != "" {
+		return expression
+	}
+	return strings.TrimSpace(license.Value)
+}
+
+// componentLicenseValues returns the non-empty license strings a component
+// carries, in order.
+func componentLicenseValues(licenses []License) []string {
+	values := make([]string, 0, len(licenses))
+	for _, license := range licenses {
+		if value := licenseExpressionValue(license); value != "" {
+			values = append(values, value)
+		}
+	}
+	return values
 }
