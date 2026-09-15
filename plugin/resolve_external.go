@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bomly-dev/bomly-plugin-syft-detector/internal/sbom"
 	"github.com/bomly-dev/bomly-sdk"
 	detectors "github.com/bomly-dev/bomly-sdk/detectorkit"
 	logkit "github.com/bomly-dev/bomly-sdk/logkit"
+	"github.com/bomly-dev/bomly-sdk/sbom"
 	"github.com/bomly-dev/bomly-sdk/system"
 	"go.uber.org/zap"
 )
