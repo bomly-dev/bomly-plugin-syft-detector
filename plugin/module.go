@@ -3,7 +3,8 @@ package plugin
 import (
 	"context"
 
-	"github.com/bomly-dev/bomly-sdk"
+	"github.com/bomly-dev/bomly-sdk/model"
+	sdkplugin "github.com/bomly-dev/bomly-sdk/plugin"
 )
 
 // Name is the plugin's identity. It MUST equal the "id" field in
@@ -14,8 +15,8 @@ const Name = "syft-detector"
 
 // supportedManagersFromSupport lists every package manager this detector
 // declares evidence patterns for, in declaration order.
-func supportedManagersFromSupport() []sdk.PackageManager {
-	managers := make([]sdk.PackageManager, 0, len(packageManagerSupport))
+func supportedManagersFromSupport() []model.PackageManager {
+	managers := make([]model.PackageManager, 0, len(packageManagerSupport))
 	for _, support := range packageManagerSupport {
 		managers = append(managers, support.PackageManager)
 	}
@@ -24,9 +25,9 @@ func supportedManagersFromSupport() []sdk.PackageManager {
 
 // supportedEcosystemsFromSupport derives the unique ecosystems behind the
 // supported package managers, in first-seen order.
-func supportedEcosystemsFromSupport() []sdk.Ecosystem {
-	seen := make(map[sdk.Ecosystem]struct{}, len(packageManagerSupport))
-	ecosystems := make([]sdk.Ecosystem, 0, len(packageManagerSupport))
+func supportedEcosystemsFromSupport() []model.Ecosystem {
+	seen := make(map[model.Ecosystem]struct{}, len(packageManagerSupport))
+	ecosystems := make([]model.Ecosystem, 0, len(packageManagerSupport))
 	for _, support := range packageManagerSupport {
 		ecosystem := support.PackageManager.Ecosystem()
 		if ecosystem == "" {
@@ -46,24 +47,24 @@ func supportedEcosystemsFromSupport() []sdk.Ecosystem {
 // and SupportedEcosystems from its own support catalog; managed execution
 // uses this module, which sources the same axes from the package's own
 // support table (packageManagerSupport).
-func Module() sdk.Module {
+func Module() sdkplugin.Module {
 	managers := supportedManagersFromSupport()
 	ecosystems := supportedEcosystemsFromSupport()
 	descriptor := Detector{
 		SupportedManagers:   managers,
 		SupportedEcosystems: ecosystems,
 	}.Descriptor()
-	return sdk.Module{
-		Kind: sdk.PluginKindDetector,
-		Detector: &sdk.DetectorModule{
+	return sdkplugin.Module{
+		Kind: sdkplugin.PluginKindDetector,
+		Detector: &sdkplugin.DetectorModule{
 			Descriptor: descriptor,
 			Support:    Detector{}.PackageManagerSupport(),
-			TargetKinds: []sdk.ExecutionTargetKind{
-				sdk.ExecutionTargetContainerImage,
-				sdk.ExecutionTargetFilesystem,
-				sdk.ExecutionTargetGitRepository,
+			TargetKinds: []sdkplugin.ExecutionTargetKind{
+				sdkplugin.ExecutionTargetContainerImage,
+				sdkplugin.ExecutionTargetFilesystem,
+				sdkplugin.ExecutionTargetGitRepository,
 			},
-			New: func(_ context.Context, host sdk.HostContext) (sdk.Detector, error) {
+			New: func(_ context.Context, host sdkplugin.HostContext) (sdkplugin.Detector, error) {
 				return Detector{
 					Logger:              host.Logger(),
 					SupportedManagers:   managers,

@@ -4,149 +4,151 @@ import (
 	"strings"
 
 	"github.com/anchore/syft/syft/cataloging"
-	"github.com/bomly-dev/bomly-sdk"
+
+	"github.com/bomly-dev/bomly-sdk/model"
+	sdkplugin "github.com/bomly-dev/bomly-sdk/plugin"
 )
 
-func syftCatalogerExpressions(req sdk.DetectionRequest) []string {
+func syftCatalogerExpressions(req sdkplugin.DetectionRequest) []string {
 	if expressions := syftCatalogerExpressionsForManager(req.PackageManager); len(expressions) > 0 {
 		return expressions
 	}
 	return syftCatalogerExpressionsForEcosystem(req.Ecosystem)
 }
 
-func syftCatalogerExpressionsForManager(manager sdk.PackageManager) []string {
+func syftCatalogerExpressionsForManager(manager model.PackageManager) []string {
 	switch manager {
-	case sdk.PackageManagerNPM, sdk.PackageManagerPNPM, sdk.PackageManagerYarn, sdk.PackageManagerBun:
+	case model.PackageManagerNPM, model.PackageManagerPNPM, model.PackageManagerYarn, model.PackageManagerBun:
 		return []string{"npm"}
-	case sdk.PackageManagerGoMod:
+	case model.PackageManagerGoMod:
 		return []string{"gomod"}
-	case sdk.PackageManagerMaven:
+	case model.PackageManagerMaven:
 		return []string{"maven"}
-	case sdk.PackageManagerGradle:
+	case model.PackageManagerGradle:
 		return []string{"gradle"}
-	case sdk.PackageManagerPip, sdk.PackageManagerPipenv, sdk.PackageManagerPoetry, sdk.PackageManagerUV:
+	case model.PackageManagerPip, model.PackageManagerPipenv, model.PackageManagerPoetry, model.PackageManagerUV:
 		return []string{"python"}
-	case sdk.PackageManagerComposer:
+	case model.PackageManagerComposer:
 		return []string{"composer"}
-	case sdk.PackageManagerBundler:
+	case model.PackageManagerBundler:
 		return []string{"ruby"}
-	case sdk.PackageManagerCargo:
+	case model.PackageManagerCargo:
 		return []string{"cargo"}
-	case sdk.PackageManagerAPK:
+	case model.PackageManagerAPK:
 		return []string{"apk"}
-	case sdk.PackageManagerDPKG:
+	case model.PackageManagerDPKG:
 		return []string{"dpkg"}
-	case sdk.PackageManagerRPM:
+	case model.PackageManagerRPM:
 		return []string{"rpm"}
-	case sdk.PackageManagerHomebrew:
+	case model.PackageManagerHomebrew:
 		return []string{"homebrew"}
-	case sdk.PackageManagerNix:
+	case model.PackageManagerNix:
 		return []string{"nix"}
-	case sdk.PackageManagerALPM:
+	case model.PackageManagerALPM:
 		return []string{"alpm"}
-	case sdk.PackageManagerConda:
+	case model.PackageManagerConda:
 		return []string{"conda"}
-	case sdk.PackageManagerNuGet:
+	case model.PackageManagerNuGet:
 		return []string{"dotnet"}
-	case sdk.PackageManagerSwiftPM, sdk.PackageManagerCocoaPods:
+	case model.PackageManagerSwiftPM, model.PackageManagerCocoaPods:
 		return []string{"swift"}
-	case sdk.PackageManagerPub:
+	case model.PackageManagerPub:
 		return []string{"dart"}
-	case sdk.PackageManagerRPackage:
+	case model.PackageManagerRPackage:
 		return []string{"r"}
-	case sdk.PackageManagerCabal, sdk.PackageManagerStack:
+	case model.PackageManagerCabal, model.PackageManagerStack:
 		return []string{"haskell"}
-	case sdk.PackageManagerLuaRocks:
+	case model.PackageManagerLuaRocks:
 		return []string{"lua"}
-	case sdk.PackageManagerOpam:
+	case model.PackageManagerOpam:
 		return []string{"ocaml"}
-	case sdk.PackageManagerRebar, sdk.PackageManagerOTP:
+	case model.PackageManagerRebar, model.PackageManagerOTP:
 		return []string{"erlang"}
-	case sdk.PackageManagerMix:
+	case model.PackageManagerMix:
 		return []string{"elixir"}
-	case sdk.PackageManagerTerraform:
+	case model.PackageManagerTerraform:
 		return []string{"terraform"}
-	case sdk.PackageManagerWordPress:
+	case model.PackageManagerWordPress:
 		return []string{"wordpress"}
-	case sdk.PackageManagerConan:
+	case model.PackageManagerConan:
 		return []string{"cpp"}
-	case sdk.PackageManagerPortage:
+	case model.PackageManagerPortage:
 		return []string{"portage"}
-	case sdk.PackageManagerSWIPLPack:
+	case model.PackageManagerSWIPLPack:
 		return []string{"prolog"}
-	case sdk.PackageManagerSnap:
+	case model.PackageManagerSnap:
 		return []string{"snap"}
 	default:
 		return nil
 	}
 }
 
-func syftCatalogerExpressionsForEcosystem(ecosystem sdk.Ecosystem) []string {
+func syftCatalogerExpressionsForEcosystem(ecosystem model.Ecosystem) []string {
 	switch ecosystem {
-	case sdk.EcosystemNPM:
+	case model.EcosystemNPM:
 		return []string{"npm"}
-	case sdk.EcosystemGo:
+	case model.EcosystemGo:
 		return []string{"gomod"}
-	case sdk.EcosystemMaven:
+	case model.EcosystemMaven:
 		return []string{"maven"}
-	case sdk.EcosystemPython:
+	case model.EcosystemPython:
 		return []string{"python"}
-	case sdk.EcosystemPHP:
+	case model.EcosystemPHP:
 		return []string{"composer"}
-	case sdk.EcosystemRuby:
+	case model.EcosystemRuby:
 		return []string{"ruby"}
-	case sdk.EcosystemRust:
+	case model.EcosystemRust:
 		return []string{"cargo"}
-	case sdk.EcosystemAPK:
+	case model.EcosystemAPK:
 		return []string{"apk"}
-	case sdk.EcosystemDPKG:
+	case model.EcosystemDPKG:
 		return []string{"dpkg"}
-	case sdk.EcosystemRPM:
+	case model.EcosystemRPM:
 		return []string{"rpm"}
-	case sdk.EcosystemALPM:
+	case model.EcosystemALPM:
 		return []string{"alpm"}
-	case sdk.EcosystemConda:
+	case model.EcosystemConda:
 		return []string{"conda"}
-	case sdk.EcosystemDotNet:
+	case model.EcosystemDotNet:
 		return []string{"dotnet"}
-	case sdk.EcosystemHomebrew:
+	case model.EcosystemHomebrew:
 		return []string{"homebrew"}
-	case sdk.EcosystemNix:
+	case model.EcosystemNix:
 		return []string{"nix"}
-	case sdk.EcosystemSwift:
+	case model.EcosystemSwift:
 		return []string{"swift"}
-	case sdk.EcosystemDart:
+	case model.EcosystemDart:
 		return []string{"dart"}
-	case sdk.EcosystemR:
+	case model.EcosystemR:
 		return []string{"r"}
-	case sdk.EcosystemHaskell:
+	case model.EcosystemHaskell:
 		return []string{"haskell"}
-	case sdk.EcosystemLua:
+	case model.EcosystemLua:
 		return []string{"lua"}
-	case sdk.EcosystemOCaml:
+	case model.EcosystemOCaml:
 		return []string{"ocaml"}
-	case sdk.EcosystemErlang:
+	case model.EcosystemErlang:
 		return []string{"erlang"}
-	case sdk.EcosystemElixir:
+	case model.EcosystemElixir:
 		return []string{"elixir"}
-	case sdk.EcosystemTerraform:
+	case model.EcosystemTerraform:
 		return []string{"terraform"}
-	case sdk.EcosystemWordPress:
+	case model.EcosystemWordPress:
 		return []string{"wordpress"}
-	case sdk.EcosystemCPP:
+	case model.EcosystemCPP:
 		return []string{"cpp"}
-	case sdk.EcosystemPortage:
+	case model.EcosystemPortage:
 		return []string{"portage"}
-	case sdk.EcosystemProlog:
+	case model.EcosystemProlog:
 		return []string{"prolog"}
-	case sdk.EcosystemSnap:
+	case model.EcosystemSnap:
 		return []string{"snap"}
 	default:
 		return nil
 	}
 }
 
-func syftCatalogerSelection(req sdk.DetectionRequest) cataloging.SelectionRequest {
+func syftCatalogerSelection(req sdkplugin.DetectionRequest) cataloging.SelectionRequest {
 	expressions := syftCatalogerExpressions(req)
 	if len(expressions) == 0 {
 		return cataloging.SelectionRequest{}
@@ -154,7 +156,7 @@ func syftCatalogerSelection(req sdk.DetectionRequest) cataloging.SelectionReques
 	return cataloging.NewSelectionRequest().WithExpression(expressions...)
 }
 
-func syftCatalogerSelectionArgs(req sdk.DetectionRequest) []string {
+func syftCatalogerSelectionArgs(req sdkplugin.DetectionRequest) []string {
 	expressions := syftCatalogerExpressions(req)
 	if len(expressions) == 0 {
 		return nil

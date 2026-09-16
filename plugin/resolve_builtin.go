@@ -10,13 +10,15 @@ import (
 
 	syftlib "github.com/anchore/syft/syft"
 	"github.com/anchore/syft/syft/cataloging/pkgcataloging"
-	"github.com/bomly-dev/bomly-sdk"
 	_ "github.com/glebarez/sqlite" // register "sqlite" driver required by syft's RPM cataloger
 	"go.uber.org/zap"
+
+	"github.com/bomly-dev/bomly-sdk/model"
+	sdkplugin "github.com/bomly-dev/bomly-sdk/plugin"
 )
 
 // ResolveGraph resolves a dependency graph by invoking the Syft Go library.
-func (d Detector) ResolveGraph(ctx context.Context, req sdk.DetectionRequest) (sdk.DetectionResult, error) {
+func (d Detector) ResolveGraph(ctx context.Context, req sdkplugin.DetectionRequest) (sdkplugin.DetectionResult, error) {
 	// Prefer the request-scoped logger (bound to this subproject) so
 	// concurrent per-subproject resolution stays attributable in logs.
 	d.Logger = req.DetectorLogger(d.Logger)
@@ -24,13 +26,13 @@ func (d Detector) ResolveGraph(ctx context.Context, req sdk.DetectionRequest) (s
 
 	graphs, err := d.resolveGraph(ctx, req, workingDir, req.Stderr)
 	if err != nil {
-		return sdk.DetectionResult{}, err
+		return sdkplugin.DetectionResult{}, err
 	}
 
-	return sdk.DetectionResult{Graphs: graphs}, nil
+	return sdkplugin.DetectionResult{Graphs: graphs}, nil
 }
 
-func (d Detector) resolveGraph(ctx context.Context, req sdk.DetectionRequest, workingDir string, stderr io.Writer) (*sdk.GraphContainer, error) {
+func (d Detector) resolveGraph(ctx context.Context, req sdkplugin.DetectionRequest, workingDir string, stderr io.Writer) (*model.GraphContainer, error) {
 	logger := d.Logger
 	if logger == nil {
 		logger = zap.NewNop()
@@ -88,7 +90,7 @@ func (d Detector) resolveGraph(ctx context.Context, req sdk.DetectionRequest, wo
 	return graphs, nil
 }
 
-func syftCreateSBOMConfig(req sdk.DetectionRequest) *syftlib.CreateSBOMConfig {
+func syftCreateSBOMConfig(req sdkplugin.DetectionRequest) *syftlib.CreateSBOMConfig {
 	cfg := syftlib.DefaultCreateSBOMConfig()
 	cfg.CatalogerSelection = syftCatalogerSelection(req)
 	if !req.EnrichmentEnabled {
@@ -115,7 +117,7 @@ func syftCreateSBOMConfig(req sdk.DetectionRequest) *syftlib.CreateSBOMConfig {
 	return cfg
 }
 
-func syftSourceInput(executionTarget sdk.ExecutionTarget, workingDir string) (string, string, *syftlib.GetSourceConfig) {
+func syftSourceInput(executionTarget sdkplugin.ExecutionTarget, workingDir string) (string, string, *syftlib.GetSourceConfig) {
 	target := workingDir
 	sourceMode := "dir"
 	if target == "" {
@@ -124,12 +126,12 @@ func syftSourceInput(executionTarget sdk.ExecutionTarget, workingDir string) (st
 	config := syftlib.DefaultGetSourceConfig()
 
 	switch executionTarget.Kind {
-	case sdk.ExecutionTargetContainerImage:
+	case sdkplugin.ExecutionTargetContainerImage:
 		if executionTarget.Location != "" {
 			target = executionTarget.Location
 		}
 		sourceMode = "container"
-	case sdk.ExecutionTargetFilesystem:
+	case sdkplugin.ExecutionTargetFilesystem:
 		if executionTarget.Location != "" {
 			target = executionTarget.Location
 		}

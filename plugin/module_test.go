@@ -7,9 +7,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	sdk "github.com/bomly-dev/bomly-sdk"
 	"github.com/bomly-dev/bomly-sdk/conformance"
 	"go.uber.org/zap"
+
+	"github.com/bomly-dev/bomly-sdk/httpkit"
+	sdkplugin "github.com/bomly-dev/bomly-sdk/plugin"
 )
 
 // testHost is a minimal HostContext for unit tests.
@@ -18,9 +20,9 @@ type testHost struct {
 }
 
 func (h testHost) Logger() *zap.Logger                 { return zap.NewNop() }
-func (h testHost) HTTPClient() *sdk.HTTPClientProvider { return nil }
-func (h testHost) Runtime() sdk.RuntimeInfo {
-	return sdk.RuntimeInfo{Execution: sdk.ExecutionEmbedded}
+func (h testHost) HTTPClient() *httpkit.ClientProvider { return nil }
+func (h testHost) Runtime() sdkplugin.RuntimeInfo {
+	return sdkplugin.RuntimeInfo{Execution: sdkplugin.ExecutionEmbedded}
 }
 
 func (h testHost) DecodeConfig(v any) error {
@@ -61,10 +63,10 @@ func TestModuleConstructsDetector(t *testing.T) {
 
 // TestModuleTargetKinds pins the execution target kinds managed hosts see.
 func TestModuleTargetKinds(t *testing.T) {
-	want := []sdk.ExecutionTargetKind{
-		sdk.ExecutionTargetContainerImage,
-		sdk.ExecutionTargetFilesystem,
-		sdk.ExecutionTargetGitRepository,
+	want := []sdkplugin.ExecutionTargetKind{
+		sdkplugin.ExecutionTargetContainerImage,
+		sdkplugin.ExecutionTargetFilesystem,
+		sdkplugin.ExecutionTargetGitRepository,
 	}
 	got := Module().Detector.TargetKinds
 	if len(got) != len(want) {
