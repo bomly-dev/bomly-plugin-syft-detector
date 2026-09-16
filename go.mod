@@ -5,7 +5,7 @@ go 1.27.0
 require (
 	github.com/anchore/packageurl-go v0.2.0
 	github.com/anchore/syft v1.51.0
-	github.com/bomly-dev/bomly-sdk v0.12.0
+	github.com/bomly-dev/bomly-sdk v0.13.0
 	github.com/glebarez/sqlite v1.11.0
 	go.uber.org/zap v1.28.0
 )

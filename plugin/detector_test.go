@@ -14,7 +14,9 @@ import (
 	syftfile "github.com/anchore/syft/syft/file"
 	syftpkg "github.com/anchore/syft/syft/pkg"
 	syftsbom "github.com/anchore/syft/syft/sbom"
-	"github.com/bomly-dev/bomly-sdk"
+
+	"github.com/bomly-dev/bomly-sdk/model"
+	sdkplugin "github.com/bomly-dev/bomly-sdk/plugin"
 )
 
 func TestDetectorApplicable(t *testing.T) {
@@ -24,7 +26,7 @@ func TestDetectorApplicable(t *testing.T) {
 	}
 
 	detector := Detector{}
-	applicable, err := detector.Applicable(context.Background(), sdk.DetectionRequest{ProjectPath: projectDir, PackageManager: sdk.PackageManagerNPM})
+	applicable, err := detector.Applicable(context.Background(), sdkplugin.DetectionRequest{ProjectPath: projectDir, PackageManager: model.PackageManagerNPM})
 	if err != nil {
 		t.Fatalf("Applicable() error = %v", err)
 	}
@@ -35,7 +37,7 @@ func TestDetectorApplicable(t *testing.T) {
 
 func TestDetectorApplicable_ReturnsFalseWithoutNPMManifest(t *testing.T) {
 	detector := Detector{}
-	applicable, err := detector.Applicable(context.Background(), sdk.DetectionRequest{ProjectPath: t.TempDir(), PackageManager: sdk.PackageManagerNPM})
+	applicable, err := detector.Applicable(context.Background(), sdkplugin.DetectionRequest{ProjectPath: t.TempDir(), PackageManager: model.PackageManagerNPM})
 	if err != nil {
 		t.Fatalf("Applicable() error = %v", err)
 	}
@@ -51,7 +53,7 @@ func TestDetectorApplicable_PythonManifest(t *testing.T) {
 	}
 
 	detector := Detector{}
-	applicable, err := detector.Applicable(context.Background(), sdk.DetectionRequest{ProjectPath: projectDir, PackageManager: sdk.PackageManagerPoetry})
+	applicable, err := detector.Applicable(context.Background(), sdkplugin.DetectionRequest{ProjectPath: projectDir, PackageManager: model.PackageManagerPoetry})
 	if err != nil {
 		t.Fatalf("Applicable() error = %v", err)
 	}
@@ -67,7 +69,7 @@ func TestDetectorApplicable_RustManifest(t *testing.T) {
 	}
 
 	detector := Detector{}
-	applicable, err := detector.Applicable(context.Background(), sdk.DetectionRequest{ProjectPath: projectDir, PackageManager: sdk.PackageManagerCargo})
+	applicable, err := detector.Applicable(context.Background(), sdkplugin.DetectionRequest{ProjectPath: projectDir, PackageManager: model.PackageManagerCargo})
 	if err != nil {
 		t.Fatalf("Applicable() error = %v", err)
 	}
@@ -78,9 +80,9 @@ func TestDetectorApplicable_RustManifest(t *testing.T) {
 
 func TestDetectorApplicable_ContainerTarget(t *testing.T) {
 	detector := Detector{}
-	applicable, err := detector.Applicable(context.Background(), sdk.DetectionRequest{
-		ExecutionTarget: sdk.ExecutionTarget{Kind: sdk.ExecutionTargetContainerImage, Location: "alpine:3.20"},
-		PackageManager:  sdk.PackageManagerRPM,
+	applicable, err := detector.Applicable(context.Background(), sdkplugin.DetectionRequest{
+		ExecutionTarget: sdkplugin.ExecutionTarget{Kind: sdkplugin.ExecutionTargetContainerImage, Location: "alpine:3.20"},
+		PackageManager:  model.PackageManagerRPM,
 	})
 	if err != nil {
 		t.Fatalf("Applicable() error = %v", err)
@@ -99,7 +101,7 @@ func TestDetectorDescriptor_AdvertisesDetectorEnrichment(t *testing.T) {
 }
 
 func TestSyftCommandArgs_AddsEnrichmentFlagsWhenRequested(t *testing.T) {
-	args := syftCommandArgs(".", sdk.DetectionRequest{EnrichmentEnabled: true})
+	args := syftCommandArgs(".", sdkplugin.DetectionRequest{EnrichmentEnabled: true})
 	want := []string{".", "-o", "spdx-json", "--enrich", "golang", "--enrich", "java", "--enrich", "javascript", "--enrich", "python"}
 	if len(args) != len(want) {
 		t.Fatalf("expected %d args, got %d: %#v", len(want), len(args), args)
@@ -112,7 +114,7 @@ func TestSyftCommandArgs_AddsEnrichmentFlagsWhenRequested(t *testing.T) {
 }
 
 func TestSyftCommandArgs_AddsCatalogerSelectionWhenPackageManagerIsFiltered(t *testing.T) {
-	args := syftCommandArgs(".", sdk.DetectionRequest{PackageManager: sdk.PackageManagerNPM})
+	args := syftCommandArgs(".", sdkplugin.DetectionRequest{PackageManager: model.PackageManagerNPM})
 	want := []string{".", "-o", "spdx-json", "--select-catalogers", "npm"}
 	if len(args) != len(want) {
 		t.Fatalf("expected %d args, got %d: %#v", len(want), len(args), args)
@@ -125,21 +127,21 @@ func TestSyftCommandArgs_AddsCatalogerSelectionWhenPackageManagerIsFiltered(t *t
 }
 
 func TestSyftCreateSBOMConfig_AddsCatalogerSelectionWhenEcosystemIsFiltered(t *testing.T) {
-	cfg := syftCreateSBOMConfig(sdk.DetectionRequest{Ecosystem: sdk.EcosystemPython})
+	cfg := syftCreateSBOMConfig(sdkplugin.DetectionRequest{Ecosystem: model.EcosystemPython})
 	if got := cfg.CatalogerSelection.SubSelectTags; len(got) != 1 || got[0] != "python" {
 		t.Fatalf("expected python sub-selection tag, got %#v", got)
 	}
 }
 
 func TestSyftCreateSBOMConfig_LeavesCatalogersBroadWithoutFilter(t *testing.T) {
-	cfg := syftCreateSBOMConfig(sdk.DetectionRequest{})
+	cfg := syftCreateSBOMConfig(sdkplugin.DetectionRequest{})
 	if !cfg.CatalogerSelection.IsEmpty() {
 		t.Fatalf("expected no cataloger selection without filter, got %#v", cfg.CatalogerSelection)
 	}
 }
 
 func TestSyftCreateSBOMConfig_EnablesOfflineSafeDetectorEnrichment(t *testing.T) {
-	cfg := syftCreateSBOMConfig(sdk.DetectionRequest{EnrichmentEnabled: true})
+	cfg := syftCreateSBOMConfig(sdkplugin.DetectionRequest{EnrichmentEnabled: true})
 	if !cfg.Packages.Golang.SearchLocalModCacheLicenses {
 		t.Fatal("expected golang local mod cache license enrichment to be enabled")
 	}
@@ -169,7 +171,7 @@ func TestSyftSourceInput_UsesFileSourceForSingleFileTargets(t *testing.T) {
 		t.Fatalf("write Cargo.lock: %v", err)
 	}
 
-	target, mode, cfg := syftSourceInput(sdk.ExecutionTarget{Kind: sdk.ExecutionTargetFilesystem, Location: projectFile}, projectFile)
+	target, mode, cfg := syftSourceInput(sdkplugin.ExecutionTarget{Kind: sdkplugin.ExecutionTargetFilesystem, Location: projectFile}, projectFile)
 	if target != projectFile {
 		t.Fatalf("expected target %q, got %q", projectFile, target)
 	}
@@ -184,7 +186,7 @@ func TestSyftSourceInput_UsesFileSourceForSingleFileTargets(t *testing.T) {
 func TestSyftSourceInput_UsesDirectorySourceForFilesystemTargets(t *testing.T) {
 	projectDir := t.TempDir()
 
-	target, mode, cfg := syftSourceInput(sdk.ExecutionTarget{Kind: sdk.ExecutionTargetFilesystem, Location: projectDir}, filepath.Join(projectDir, "package.json"))
+	target, mode, cfg := syftSourceInput(sdkplugin.ExecutionTarget{Kind: sdkplugin.ExecutionTargetFilesystem, Location: projectDir}, filepath.Join(projectDir, "package.json"))
 	if target != projectDir {
 		t.Fatalf("expected directory target %q, got %q", projectDir, target)
 	}
@@ -197,7 +199,7 @@ func TestSyftSourceInput_UsesDirectorySourceForFilesystemTargets(t *testing.T) {
 }
 
 func TestSyftSourceInput_UsesContainerReferenceForContainerTargets(t *testing.T) {
-	target, mode, cfg := syftSourceInput(sdk.ExecutionTarget{Kind: sdk.ExecutionTargetContainerImage, Location: "alpine:3.20"}, t.TempDir())
+	target, mode, cfg := syftSourceInput(sdkplugin.ExecutionTarget{Kind: sdkplugin.ExecutionTargetContainerImage, Location: "alpine:3.20"}, t.TempDir())
 	if target != "alpine:3.20" {
 		t.Fatalf("expected container target, got %q", target)
 	}
@@ -266,17 +268,17 @@ func TestGraphFromSyftSBOM(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected dependency package %q", dependency.PURL)
 	}
-	mapped, ok := mappedNode.(*sdk.DependencyNode)
+	mapped, ok := mappedNode.(*model.DependencyNode)
 	if !ok {
 		t.Fatalf("expected a dependency node, got %T", mappedNode)
 	}
-	if mapped.Ecosystem != sdk.EcosystemMaven || mapped.Org != "com.example" || mapped.Type != sdk.ParsePackageType(string(syftpkg.JavaPkg)) {
+	if mapped.Ecosystem != model.EcosystemMaven || mapped.Org != "com.example" || mapped.Type != model.ParsePackageType(string(syftpkg.JavaPkg)) {
 		t.Fatalf("unexpected mapped package identity: %#v", mapped)
 	}
-	if mapped.NodeID() != dependency.PURL || mapped.Language != sdk.ParseLanguage(dependency.Language.String()) || mapped.FoundBy != dependency.FoundBy {
+	if mapped.NodeID() != dependency.PURL || mapped.Language != model.ParseLanguage(dependency.Language.String()) || mapped.FoundBy != dependency.FoundBy {
 		t.Fatalf("unexpected mapped package metadata: %#v", mapped)
 	}
-	if lics := sdk.DetectionLicenses(mapped); len(lics) != 1 || lics[0].Value != "Apache-2.0" {
+	if lics := model.DetectionLicenses(mapped); len(lics) != 1 || lics[0].Value != "Apache-2.0" {
 		t.Fatalf("unexpected mapped licenses: %#v", lics)
 	}
 	if len(mapped.Locations) != 1 || mapped.Locations[0].RealPath != "pom.xml" {
@@ -338,7 +340,7 @@ func TestGraphContainerFromSyftSBOM_SplitsGraphsByManifestPath(t *testing.T) {
 		},
 	}
 
-	container, err := graphContainerFromSyftSBOM(s, sdk.PackageManagerNPM)
+	container, err := graphContainerFromSyftSBOM(s, model.PackageManagerNPM)
 	if err != nil {
 		t.Fatalf("graphContainerFromSyftSBOM() error = %v", err)
 	}
@@ -356,10 +358,10 @@ func TestDetectorResolveGraph_UsesSyftLibrary(t *testing.T) {
 	projectDir := writeNPMProject(t)
 
 	detector := Detector{WorkingDir: projectDir}
-	result, err := detector.ResolveGraph(context.Background(), sdk.DetectionRequest{
+	result, err := detector.ResolveGraph(context.Background(), sdkplugin.DetectionRequest{
 		ProjectPath:    projectDir,
-		PackageManager: sdk.PackageManagerNPM,
-		Query:          sdk.DependencyQuery{Name: "react"},
+		PackageManager: model.PackageManagerNPM,
+		Query:          model.DependencyQuery{Name: "react"},
 	})
 	if err != nil {
 		t.Fatalf("ResolveGraph() error = %v", err)

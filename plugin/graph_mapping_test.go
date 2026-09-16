@@ -8,7 +8,8 @@ import (
 	"github.com/anchore/syft/syft/artifact"
 	syftpkg "github.com/anchore/syft/syft/pkg"
 	syftsbom "github.com/anchore/syft/syft/sbom"
-	"github.com/bomly-dev/bomly-sdk"
+
+	"github.com/bomly-dev/bomly-sdk/model"
 )
 
 // TestGraphFromSyftSBOMMapsPackagesEdgesLicenses exercises the builtin Syft →
@@ -68,13 +69,13 @@ func TestGraphFromSyftSBOMMapsPackagesEdgesLicenses(t *testing.T) {
 	}
 
 	// License carried through from the Syft package.
-	licenses := sdk.DetectionLicenses(certifiNode)
+	licenses := model.DetectionLicenses(certifiNode)
 	if len(licenses) == 0 || licenses[0].Value != "MPL-2.0" {
 		t.Errorf("expected MPL-2.0 license on certifi, got %+v", licenses)
 	}
 }
 
-func nodeByName(t *testing.T, g *sdk.Graph, name string) *sdk.DependencyNode {
+func nodeByName(t *testing.T, g *model.Graph, name string) *model.DependencyNode {
 	t.Helper()
 	for _, n := range g.DependencyNodes() {
 		if n.Name == name {
