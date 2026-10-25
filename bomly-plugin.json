@@ -17,5 +17,56 @@
   "source": "github:bomly-dev/bomly-plugin-syft-detector@v0.1.0",
   "homepage": "https://github.com/bomly-dev/bomly-plugin-syft-detector",
   "license": "Apache-2.0",
-  "description": "Detector plugin that resolves dependency graphs for filesystems, git repositories, and container images through Syft (vendored library or external syft CLI)."
+  "description": "Detector plugin that resolves dependency graphs for filesystems, git repositories, and container images through Syft (vendored library or external syft CLI).",
+  "access": {
+    "filesystemRead": [
+      "any",
+      "cache",
+      "home",
+      "project",
+      "temp"
+    ],
+    "filesystemWrite": [
+      "cache",
+      "home",
+      "temp"
+    ],
+    "network": [
+      "*",
+      "*.docker.io",
+      "api.snapcraft.io",
+      "proxy.golang.org",
+      "sum.golang.org"
+    ],
+    "environment": [
+      "AppData",
+      "CONTAINERD_*",
+      "CONTAINER_*",
+      "DOCKER_*",
+      "GO*",
+      "HOME",
+      "HOMEDRIVE",
+      "HOMEPATH",
+      "HTTPS_PROXY",
+      "HTTP_PROXY",
+      "LocalAppData",
+      "NO_PROXY",
+      "PATH",
+      "REGISTRY_AUTH_FILE",
+      "SQLITE_TMPDIR",
+      "TMPDIR",
+      "USERPROFILE",
+      "VCPKG_ROOT",
+      "XDG_*",
+      "XDG_CACHE_HOME",
+      "http_proxy",
+      "https_proxy",
+      "no_proxy"
+    ],
+    "subprocesses": [
+      "*",
+      "go",
+      "ssh"
+    ]
+  }
 }

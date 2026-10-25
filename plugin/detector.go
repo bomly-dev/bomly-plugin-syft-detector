@@ -120,6 +120,8 @@ func (d Detector) Descriptor() sdkplugin.DetectorDescriptor {
 		SupportedEcosystems: supportedEcosystems,
 		SupportedManagers:   supportedManagers,
 		Tags:                []string{"graph-resolution", "component-targeting", "sbom-import", "detector-enrichment"},
+		// No Requires: Syft catalogues container images as well as source
+		// trees, and a detector runs before any graph or registry exists.
 	}
 }
 
