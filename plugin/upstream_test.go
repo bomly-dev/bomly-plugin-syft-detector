@@ -20,16 +20,16 @@ const anchoreApacheLicenseSHA256 = "c71d239df91726fc519c6eb72d318ec65820627232b2
 // read before it ships rather than found afterwards (bomly-planning#10).
 func TestUpstreamLicenseIsUnchanged(t *testing.T) {
 	const path = "github.com/anchore/syft"
-	out, err := exec.Command("go", "list", "-m", "-json", path).Output()
+	out, err := exec.Command("go", "mod", "download", "-json", path).Output()
 	if err != nil {
-		t.Fatalf("go list -m %s: %v", path, err)
+		t.Fatalf("go mod download %s: %v", path, err)
 	}
 	var mod struct{ Version, Dir string }
 	if err := json.Unmarshal(out, &mod); err != nil {
-		t.Fatalf("go list -m %s: decode: %v", path, err)
+		t.Fatalf("go mod download %s: decode: %v", path, err)
 	}
 	if mod.Dir == "" {
-		t.Fatalf("go list -m %s: no module directory in %s", path, out)
+		t.Fatalf("go mod download %s: no module directory in %s", path, out)
 	}
 	data, err := os.ReadFile(filepath.Join(mod.Dir, "LICENSE"))
 	if err != nil {
