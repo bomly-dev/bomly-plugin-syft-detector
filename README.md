@@ -64,6 +64,13 @@ Cataloguing reads local files, but three paths can reach the network:
   on remote license lookups against the Go module proxy, Maven Central, the
   npm registry and PyPI.
 
+## Upstream
+
+The builtin variant compiles in Anchore's Syft, which is Apache-2.0.
+`TestUpstreamLicenseIsUnchanged` in `plugin/upstream_test.go` fails any
+dependency bump that changes Syft's `LICENSE` file, so a relicense gets read
+before it ships.
+
 ## Access
 
 `bomly-plugin.json` declares what the released (builtin) plugin touches, which
